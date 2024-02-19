@@ -19,19 +19,32 @@ def parse_film_data(response):
     year = response.xpath('//*[@data-wikidata-property-id="P577"]//a[@title]//text() | '
                           '//*[@class="dtstart"]//text()').getall()  # NOQA
 
-    yield {
+    data = {
         'Название': title,
         'Жанр': exclude_special_notations(genre),
         'Режиссер': exclude_special_notations(director),
         'Страна': exclude_special_notations(country_name),
         # если список существует, то возвращает последнее значение
         'Год': year[-1] if year else year,
+        'Рейтинг IMDB': None,
     }
+
+    # Если есть ссылка на IMDB, то запускаем еще одного паука, чтобы вытащить рейтинг
+    if imdb_url := response.xpath('//*[@data-wikidata-property-id="P345"]//a/@href').extract_first():
+        yield scrapy.Request(imdb_url, callback=parse_imdb_rating, cb_kwargs={'data': data})
+    else:
+        yield data
+
+
+def parse_imdb_rating(response, data):
+    data['Рейтинг IMDB'] = response.xpath(
+        '//div[@data-testid="hero-rating-bar__aggregate-rating__score"]//text()').extract_first()  # NOQA
+    yield data
 
 
 class FilmDataMtsShadItem(scrapy.Spider):
     name = 'film_data'
-    allowed_domains = ["ru.wikipedia.org"]
+    allowed_domains = ["ru.wikipedia.org","www.imdb.com"]
     start_urls = ['https://ru.wikipedia.org/wiki/Категория:Фильмы_по_алфавиту']
 
     def parse(self, response, **kwargs):
