@@ -1,4 +1,4 @@
-# Веб-скрапинг Wikipedia со Scrapy.
+# Веб-скрапинг Wikipedia со Scrapy
 
 ![logo-wide](logo-wide.jpeg)
 
